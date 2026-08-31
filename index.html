@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MARCO-XMD | Pairing</title>
+    <style>
+        :root { --primary: #00ffcc; --bg: #0a0a0a; --box-bg: rgba(15, 15, 15, 0.95); }
+        body { margin: 0; background: var(--bg); color: var(--primary); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; }
+        canvas { position: absolute; top: 0; left: 0; z-index: -1; }
+        .container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; padding: 20px; box-sizing: border-box; }
+        .box { border: 1px solid var(--primary); padding: 40px; background: var(--box-bg); text-align: center; box-shadow: 0 0 30px rgba(0, 255, 204, 0.2); border-radius: 15px; width: 100%; max-width: 450px; backdrop-filter: blur(10px); }
+        h1 { margin-top: 0; font-size: 2.5em; letter-spacing: 3px; text-transform: uppercase; text-shadow: 0 0 10px var(--primary); }
+        p { color: #ccc; margin-bottom: 25px; font-size: 0.95em; }
+        .input-group { margin-bottom: 20px; text-align: left; }
+        label { display: block; margin-bottom: 8px; font-size: 0.8em; text-transform: uppercase; color: var(--primary); }
+        input { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(0, 255, 204, 0.3); color: #fff; padding: 15px; width: 100%; box-sizing: border-box; border-radius: 8px; outline: none; font-size: 1.1em; transition: 0.3s; }
+        input:focus { border-color: var(--primary); box-shadow: 0 0 10px rgba(0, 255, 204, 0.3); }
+        button { background: var(--primary); color: #000; border: none; padding: 15px; cursor: pointer; font-weight: bold; width: 100%; border-radius: 8px; font-size: 1em; text-transform: uppercase; transition: 0.3s; margin-top: 10px; }
+        button:hover { background: #00ccaa; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0, 255, 204, 0.4); }
+        button:disabled { background: #333; color: #666; cursor: not-allowed; transform: none; }
+        #codeDisplay { font-size: 2.5em; margin: 25px 0; letter-spacing: 10px; display: none; color: #fff; text-shadow: 0 0 15px var(--primary); font-weight: 900; background: rgba(0, 255, 204, 0.1); padding: 20px; border-radius: 10px; border: 1px dashed var(--primary); }
+        .loading-spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(0,255,204,.3); border-radius: 50%; border-top-color: var(--primary); animation: spin 1s ease-in-out infinite; margin-right: 10px; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .footer { margin-top: 30px; font-size: 0.8em; color: #666; }
+    </style>
+</head>
+<body>
+    <canvas id="matrix"></canvas>
+    <div class="container">
+        <div class="box">
+            <h1>𝐌𝐀𝐑𝐂𝐎-𝐗𝐌𝐃</h1>
+            <p id="statusText">Connectez votre compte WhatsApp en générant un code de couplage sécurisé.</p>
+
+            <div id="inputArea">
+                <div class="input-group">
+                    <label for="phone">Numéro de téléphone (avec indicatif)</label>
+                    <input type="text" id="phone" placeholder="Ex: 50941131299" onkeypress="if(event.key === 'Enter') generatePairing()">
+                </div>
+                <button id="genBtn" onclick="generatePairing()">Générer le code</button>
+            </div>
+
+            <div id="resultArea" style="display:none;">
+                <div id="codeDisplay"></div>
+                <p style="font-size: 0.85em; color: #aaa;">Entrez ce code sur votre téléphone :<br><b>Appareils connectés > Connecter un appareil > Se connecter avec le numéro de téléphone</b></p>
+                <button id="copyBtn" onclick="copyCode()">Copier le code</button>
+                <button id="retryBtn" style="background: transparent; color: var(--primary); border: 1px solid var(--primary); margin-top: 15px;" onclick="location.reload()">Recommencer</button>
+            </div>
+        </div>
+        <div class="footer">© 2024 MARCO-XMD Bot - Tous droits réservés</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('matrix');
+        const ctx = canvas.getContext('2d');
+        function resize() { canvas.height = window.innerHeight; canvas.width = window.innerWidth; }
+        window.addEventListener('resize', resize); resize();
+        const letters = "MARCOXMD0123456789";
+        const fontSize = 14;
+        let columns = canvas.width / fontSize;
+        let drops = Array(Math.floor(columns)).fill(1);
+        function draw() {
+            ctx.fillStyle = "rgba(10, 10, 10, 0.1)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#00ffcc22";
+            ctx.font = fontSize + "px monospace";
+            drops.forEach((y, i) => {
+                const text = letters[Math.floor(Math.random() * letters.length)];
+                ctx.fillText(text, i * fontSize, y * fontSize);
+                if (y * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                drops[i]++;
+            });
+        }
+        setInterval(draw, 50);
+
+        async function generatePairing() {
+            const numInput = document.getElementById('phone');
+            const status = document.getElementById('statusText');
+            const btn = document.getElementById('genBtn');
+            const num = numInput.value.replace(/[^0-9]/g, '');
+
+            if(!num || num.length < 10) return alert("Veuillez entrer un numéro valide avec l'indicatif pays !");
+
+            btn.disabled = true;
+            btn.innerHTML = '<div class="loading-spinner"></div> Génération...';
+            status.innerText = "Initialisation de la session sécurisée...";
+
+            try {
+                const res = await fetch(`/pair?number=${num}`);
+                const data = await res.json();
+
+                if(data.code) {
+                    document.getElementById('inputArea').style.display = "none";
+                    document.getElementById('resultArea').style.display = "block";
+                    const display = document.getElementById('codeDisplay');
+                    display.innerText = data.code;
+                    display.style.display = "block";
+                    status.innerText = "Code généré avec succès !";
+                } else {
+                    throw new Error(data.error || "Erreur inconnue");
+                }
+            } catch (err) {
+                alert("Erreur : " + err.message);
+                btn.disabled = false;
+                btn.innerText = "Réessayer";
+                status.innerText = "Échec de la connexion au serveur.";
+            }
+        }
+
+        function copyCode() {
+            const code = document.getElementById('codeDisplay').innerText;
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = document.getElementById('copyBtn');
+                const originalText = btn.innerText;
+                btn.innerText = "Copié !";
+                btn.style.background = "#fff";
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.style.background = "var(--primary)";
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>
